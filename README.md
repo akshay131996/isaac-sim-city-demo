@@ -1,6 +1,13 @@
-# Isaac Sim City Demo
+# Isaac Sim Demos
 
-A minimal NVIDIA Isaac Sim scene: an NVIDIA Leatherback car parked on a street in the **Rivermark** outdoor city environment, captured by a camera doing a slow 360° orbit, rendered headless and encoded to video.
+Two minimal NVIDIA Isaac Sim scenes, rendered headless on a RunPod GPU instance:
+
+1. **[City drive-by](#1-city-demo)** — a car parked on a street in the Rivermark city environment, 360° orbit camera
+2. **[Warehouse forklift](#2-warehouse-forklift-demo)** — a forklift moves a box between aisles in a 10×10×10 m warehouse, fully scripted kinematic animation
+
+## 1. City demo
+
+An NVIDIA Leatherback car parked on a street in the **Rivermark** outdoor city environment, captured by a camera doing a slow 360° orbit, rendered headless and encoded to video.
 
 ![Demo](demo.gif)
 
@@ -29,3 +36,24 @@ ffmpeg -framerate 20 -i simple_city_frames/frame_%04d.jpg -c:v libx264 -pix_fmt 
 ```
 
 > Note: `libglu1-mesa` is required — without it the RTX material system (MDL) fails to load and the camera silently returns empty frames.
+
+## 2. Warehouse forklift demo
+
+![Warehouse demo](warehouse/demo.gif)
+
+*Full-quality video: [warehouse_forklift.mp4](warehouse/warehouse_forklift.mp4)*
+
+A 10×10×10 m warehouse room built from scaled cuboid prims, two aisles of pallets loaded with KLT bins and cardboard boxes, and a forklift that picks up a box in aisle A, carries it across, and sets it down in aisle B.
+
+[`warehouse/warehouse_forklift.py`](warehouse/warehouse_forklift.py) is written as a learning document. The key ideas:
+
+- **Kinematic choreography, no physics.** The whole animation is one waypoint table `(time, x, y, yaw, fork_height)` interpolated per frame with smoothstep easing, and the render loop only calls `world.render()`. Deterministic, stable, nothing to tune.
+- **Pose-follow "attach".** While the carry flag is on, the box's pose is set each frame to a fixed offset along the forklift's fork axis — simpler and more robust than USD reparenting mid-sim.
+- **Verify assets before trusting them.** The script prints every loaded asset's bounding box (catches missing assets and cm-vs-m unit mismatches) and was developed with a `SMOKE=1` mode that renders stills at key waypoints before committing to a full render. That workflow caught a narrow default camera FOV, a wrong fork-prim match, and the forklift's forks pointing along its local −y axis.
+
+```bash
+export OMNI_KIT_ACCEPT_EULA=yes
+SMOKE=1 xvfb-run -a python -u warehouse/warehouse_forklift.py   # test stills first
+xvfb-run -a python -u warehouse/warehouse_forklift.py           # full 480-frame render
+ffmpeg -framerate 20 -i warehouse_frames/frame_%04d.jpg -c:v libx264 -pix_fmt yuv420p warehouse_forklift.mp4
+```
