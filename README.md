@@ -1,9 +1,22 @@
 # Isaac Sim Demos
 
-Two minimal NVIDIA Isaac Sim scenes, rendered headless on a RunPod GPU instance:
+A progressive series of NVIDIA Isaac Sim projects, all rendered headless on a
+RunPod GPU instance. Start here:
 
-1. **[City drive-by](#1-city-demo)** — a car parked on a street in the Rivermark city environment, 360° orbit camera
-2. **[Warehouse forklift](#2-warehouse-forklift-demo)** — a forklift moves a box between aisles in a 10×10×10 m warehouse, fully scripted kinematic animation
+- **[SETUP.md](SETUP.md)** — environment, launch recipe, per-demo commands (run everything without assistance)
+- **[LEARNINGS.md](LEARNINGS.md)** — every debugging lesson, in the order it was earned
+
+| # | Project | Concepts | Video |
+|---|---------|----------|-------|
+| 1 | [City drive-by](#1-city-demo) | scene refs, camera rig, headless pipeline | 10 s |
+| 2 | [Warehouse forklift (kinematic)](#2-warehouse-forklift-demo) | waypoint choreography, pose-follow attach | 24 s |
+| 3 | [Warehouse forklift (physics)](physics/warehouse_physics.py) | rigid bodies, hand-authored colliders, friction | 29 s |
+| 4 | [Sensor rig](sensors/sensor_rig.py) | Replicator annotators: RGB / depth / segmentation | 30 s |
+| 5 | [City delivery](city_delivery/city_delivery.py) | multi-robot choreography, camera cuts | 60 s |
+| 6 | [RL: Jetbot learns goal-reaching](rl/rl_jetbot_cem.py) | cross-entropy method, physics-in-the-loop training | ~45 s |
+
+Projects 3–6: scripts and docs are final; videos are rendered on the pod and
+added as they complete.
 
 ## 1. City demo
 
