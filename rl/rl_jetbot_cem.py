@@ -49,6 +49,7 @@ from omni.isaac.core.prims import XFormPrim
 from omni.isaac.core.utils.nucleus import get_assets_root_path
 from omni.isaac.core.utils.stage import add_reference_to_stage
 from omni.isaac.core.utils.rotations import euler_angles_to_quat, quat_to_euler_angles
+from omni.isaac.core.utils.types import ArticulationAction
 from omni.isaac.sensor import Camera
 import omni
 from pxr import UsdGeom, UsdLux, Gf
@@ -56,9 +57,11 @@ from pxr import UsdGeom, UsdLux, Gf
 FRAMES_DIR = "/workspace/rl_frames"
 FPS = 20
 PHYS_DT = 1.0 / 60.0
-EP_STEPS = 180                # 3 s episodes at 60 Hz
+EP_STEPS = 300                # 5 s episodes at 60 Hz — goals must be
+                              # REACHABLE within an episode or the success
+                              # bonus never fires and there is no signal
 POP, ELITES, ITERS = 16, 4, 10
-WHEEL_SPEED = 12.0            # action scale, rad/s
+WHEEL_SPEED = 15.0            # action scale, rad/s
 SMOKE = os.environ.get("SMOKE") == "1"
 rng = np.random.default_rng(7)
 
@@ -111,8 +114,13 @@ aim_camera(np.array([0.7, 0.0, 0.1]))
 
 def get_obs(goal):
     """Observation in the ROBOT frame — this is the feature engineering that
-    makes an 8-parameter policy sufficient."""
-    pos, quat = robot_xf.get_world_pose()
+    makes an 8-parameter policy sufficient.
+
+    NOTE: pose comes from the ARTICULATION (physics view), not XFormPrim.
+    With Fabric enabled, simulated poses never write back to USD, so an
+    XFormPrim observer reads the frozen spawn pose forever — the policy
+    goes blind while the robot drives (v2 bug, and LEARNINGS.md #17)."""
+    pos, quat = robot.get_world_pose()
     yaw = quat_to_euler_angles(quat)[2]
     to_goal = goal[:2] - pos[:2]
     dist = float(np.linalg.norm(to_goal))
@@ -131,13 +139,20 @@ def policy_action(params, obs):
 def run_episode(params, goal, record=None, caption=""):
     """One rollout. record: list to append video frames to (None = headless)."""
     world.reset()
+    # Command wheels through the articulation CONTROLLER in velocity mode.
+    # v1 bug: set_joint_velocities writes joint STATE, which the joint
+    # DRIVES immediately override — the robot never moved and every policy
+    # scored identically. Drives are the motors; talk to the motors.
+    controller = robot.get_articulation_controller()
+    controller.switch_control_mode("velocity")
     goal_vis.set_world_pose(position=np.array([goal[0], goal[1], 0.05]))
     start_obs, start_dist = get_obs(goal)
     dist = start_dist
     for step in range(EP_STEPS):
         obs, dist = get_obs(goal)
         v = policy_action(params, obs)
-        robot.set_joint_velocities(np.array(v), joint_indices=np.array([left_idx, right_idx]))
+        controller.apply_action(ArticulationAction(
+            joint_velocities=np.array(v), joint_indices=np.array([left_idx, right_idx])))
         render = record is not None and step % 3 == 0   # 60 Hz physics -> 20 fps video
         world.step(render=render)
         if render:
@@ -157,7 +172,7 @@ def run_episode(params, goal, record=None, caption=""):
 
 def sample_goal():
     ang = rng.uniform(-np.pi, np.pi)
-    r = rng.uniform(1.2, 2.2)
+    r = rng.uniform(0.8, 1.6)   # reachable within one episode (see EP_STEPS)
     return np.array([r * np.cos(ang), r * np.sin(ang)])
 
 
