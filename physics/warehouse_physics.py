@@ -207,7 +207,7 @@ for i, bx in enumerate([-3.28, -2.72]):
     FixedCuboid(prim_path=f"/World/Dunnage{i}", position=np.array([bx, -0.2, 0.08]),
                 scale=np.array([0.12, 0.22, 0.16]), color=np.array([0.45, 0.32, 0.18]))
 BOX_START = np.array([-3.0, -0.2, 0.24])
-place(f"{WH}/SM_CardBoxA_01.usd", "/World/HeroBox", BOX_START)
+place(f"{WH}/SM_CardBoxA_01.usd", "/World/HeroBox", BOX_START, yaw_deg=15)
 
 # a loose stack next to aisle A that can topple if clipped — physics showcase
 place(f"{WH}/SM_CardBoxA_01.usd", "/World/Loose/Stack1", [-2.6, 3.2, 0.05])
@@ -260,7 +260,10 @@ if fork_prim is not None:
         c.GetSizeAttr().Set(1.0)
         api = UsdGeom.XformCommonAPI(c.GetPrim())
         api.SetTranslate(Gf.Vec3d(lx, -1.2, 0.082))   # fork-local; verified via smoke dump
-        api.SetScale(Gf.Vec3f(0.12, 1.1, 0.05))
+        # 0.30 wide (visually the blades are 0.12): v13 found the 0.5 m box
+        # fits EXACTLY between the real blades' inner edges — they straddled
+        # it. Wider invisible colliders guarantee engagement.
+        api.SetScale(Gf.Vec3f(0.30, 1.1, 0.05))
         UsdPhysics.CollisionAPI.Apply(c.GetPrim())
         UsdGeom.Imageable(c.GetPrim()).MakeInvisible()
 
@@ -307,8 +310,10 @@ WAYPOINTS = [
     (18.0, -0.4, -0.2,  -90, 0.55),  # back out with the load
     (22.0,  0.4,  0.9,   90, 0.55),  # 4-second 180-degree turn (v12: fast turn threw the load)
     (25.0,  1.55, 0.9,   90, 0.55),  # approach aisle B drop zone
-    (27.0,  1.55, 0.9,   90, -0.08), # lower until the box grounds
-    (29.0,  0.8,  0.9,   90, -0.08), # reverse: floor friction strips the box off
+    (27.0,  1.55, 0.9,   90, -0.12), # lower until the box grounds and the
+                                     # blades fully disengage (v14: at -0.08
+                                     # the retreating blades dragged the box)
+    (29.0,  0.8,  0.9,   90, -0.12), # reverse: box stays put on the floor
 ]
 
 
