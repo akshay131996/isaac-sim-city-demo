@@ -209,9 +209,12 @@ LOOK = np.array([0.0, 0.0, 0.8])
 
 
 def place_camera(t):
-    """Slow orbit around the room, elevated three-quarter view."""
+    """Slow orbit around the room, elevated three-quarter view.
+    Radius must stay under the room half-width (5 m) at EVERY angle — a
+    6.2 m orbit put the camera inside the walls on the axis-aligned parts
+    of the circle (v1 smoke). 4.2 m clears walls and passes above racks."""
     theta = np.radians(225) + 2 * np.pi * (t / (NUM_FRAMES / FPS)) * 0.6
-    pos = LOOK + np.array([6.2 * np.cos(theta), 6.2 * np.sin(theta), 4.6])
+    pos = LOOK + np.array([4.2 * np.cos(theta), 4.2 * np.sin(theta), 4.8])
     d = LOOK - pos
     yaw = np.arctan2(d[1], d[0])
     pitch = np.arctan2(-d[2], np.linalg.norm(d[:2]))
